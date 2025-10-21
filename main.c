@@ -2,57 +2,106 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct Sala {
+typedef struct Sala {
     char valor[50];
     struct Sala* esquerda;
     struct Sala* direita;
-};
+    char pista[30];
+} Sala;
 
-struct Sala* criarSala(char* valor) {
-    struct Sala* novo = (struct Sala*) malloc(sizeof(struct Sala));
+typedef struct Pista {
+    char valor[30];
+    struct Pista* esquerda;
+    struct Pista* direita;
+} Pista;
+
+Sala* criarSala(char* valor, char* pista) {
+    Sala* novo = (Sala*) malloc(sizeof(Sala));
+    strcpy(novo->valor, valor);
+    novo->esquerda = NULL;
+    novo->direita = NULL;
+    strcpy(novo->pista, pista);
+    return novo;
+}
+
+Pista* criarPista(const char* valor) {
+    Pista* novo = (Pista*)malloc(sizeof(Pista));
     strcpy(novo->valor, valor);
     novo->esquerda = NULL;
     novo->direita = NULL;
     return novo;
 }
 
-void explorarSalas(struct Sala** atual, char* direcao) {
+Pista* inserirPista(Pista** raiz, const char* valor) {
+    if (*raiz == NULL) {
+    *raiz = criarPista(valor);
+    return *raiz;
+    } else if (strcmp(valor, (*raiz)->valor) < 0) {
+        (*raiz)->esquerda = inserirPista(&((*raiz)->esquerda), valor);
+    } else {
+        (*raiz)->direita = inserirPista(&((*raiz)->direita), valor);
+    }
+    return *raiz;
+}
+
+void explorarSalasComPistas(Sala** atual, char* direcao, Pista** pistas) {
     if (strcmp(direcao, "esquerda") == 0) {
         if ((*atual)->esquerda == NULL) {
-            printf("Não há caminho para o lado esquerdo, tente outra direção.");
+            printf("Não há caminho para o lado esquerdo, tente outra direção.\n");
             return;
         }
         *atual = (*atual)->esquerda;
     } else if ((strcmp(direcao, "direita") == 0)) {
         if ((*atual)->direita == NULL) {
-            printf("Não há caminho para o lado direito, tente outra direção.");
+            printf("Não há caminho para o lado direito, tente outra direção.\n");
             return;
         }
         *atual = (*atual)->direita;
     }
+    if (strcmp((*atual)->pista, "nada") != 0) {
+        inserirPista(pistas, (*atual)->pista);
+    }
 }
 
-void liberar(struct Sala* raiz) {
+void liberarSalas(Sala* raiz) {
     if (raiz != NULL) {
-        liberar(raiz->esquerda);
-        liberar(raiz->direita);
+        liberarSalas(raiz->esquerda);
+        liberarSalas(raiz->direita);
         free(raiz);
     }
 }
 
+void exibirPistas(Pista* raiz) {
+    if (raiz != NULL) {
+        exibirPistas(raiz->esquerda);
+        printf("%s ", raiz->valor);
+        exibirPistas(raiz->direita);
+    }
+}
+
+void liberarPistas(Pista* raiz) {
+    if (raiz != NULL) {
+        liberarPistas(raiz->esquerda);
+        liberarPistas(raiz->direita);
+        free(raiz);
+    }
+}
 
 int main () {
-    struct Sala* raiz = criarSala("Hall de Entrada");
-    raiz->esquerda = criarSala("Sala de Estar");
-    raiz->direita = criarSala("Biblioteca");
-    raiz->esquerda->esquerda = criarSala("Quarto");
+    Sala* raiz = criarSala("Hall de Entrada", "nada");
+    raiz->esquerda = criarSala("Sala de Estar", "Chave perdida");
+    raiz->direita = criarSala("Biblioteca", "Livro com pagina faltando");
+    raiz->esquerda->esquerda = criarSala("Quarto", "Lencol manchado");
+
+    Pista* raizPistas = NULL;
 
     char opcao[2];
-    struct Sala* atual = raiz;
+    Sala* atual = raiz;
 
     do {
-        printf("-+- Detective Quest -+-\n");
-        printf("Sala atual: %s\n\n", atual->valor);
+        printf("\n-+- Detective Quest -+-\n");
+        printf("Sala atual: %s\n", atual->valor);
+        printf("Pista da sala: %s\n\n", atual->pista);
 
         if (atual->esquerda != NULL) {
             printf("e. Ir para a esquerda\n");
@@ -67,22 +116,20 @@ int main () {
         getchar();
 
         if (strcmp(opcao, "e") == 0) {
-            explorarSalas(&atual, "esquerda");
+            explorarSalasComPistas(&atual, "esquerda", &raizPistas);
         } else if (strcmp(opcao, "d") == 0) {
-            explorarSalas(&atual, "direita");
+            explorarSalasComPistas(&atual, "direita", &raizPistas);
         } else if (strcmp(opcao, "s") == 0) {
-            printf("Saindo...\n");
+            printf("Pistas coletadas: ");
+            exibirPistas(raizPistas);
+            printf("\n\nSaindo...\n");
         } else {
             printf("Opção inválida. Tente novamente.\n");
         }
-
-        if (strcmp(opcao, "s") != 0) {
-            printf("\nPressione ENTER para continuar...");
-            getchar();
-        }
     } while (strcmp(opcao, "s") != 0);
 
-    liberar(raiz);
+    liberarSalas(raiz);
+    liberarPistas(raizPistas);
 
     return 0;
 }
